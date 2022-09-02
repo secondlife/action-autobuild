@@ -14,19 +14,12 @@ inputs:
     type: boolean
     description: Install autobuild using secondlife/setup-autobuild
     default: true
-  configuration:
-    type: string
-    description: autobuild configuration
   configure-args:
     type: string
     description: Additional arguments passed to autobuild configure
   build-args:
     type: string
     description: Additional arguments passed to autobuild build
-  addrsize:
-    type: string
-    description: AUTOBUILD_ADDRSIZE
-    default: "32"
   package:
     type: boolean
     description: Whether to perform autobuild package
@@ -62,23 +55,14 @@ runs:
 
     - name: Configure
       shell: bash
-      env:
-        AUTOBUILD_ADDRSIZE: ${{ inputs.addrsize }}
-        AUTOBUILD_CONFIGURATION: ${{ inputs.configuration }}
       run: autobuild configure ${{ inputs.configure-args }}
 
     - name: Build
       shell: bash
-      env:
-        AUTOBUILD_ADDRSIZE: ${{ inputs.addrsize }}
-        AUTOBUILD_CONFIGURATION: ${{ inputs.configuration }}
       run: autobuild build ${{ inputs.build-args }}
 
     - name: Package
       id: package
       shell: bash
       if: inputs.package
-      env:
-        AUTOBUILD_ADDRSIZE: ${{ inputs.addrsize }}
-        AUTOBUILD_CONFIGURATION: ${{ inputs.configuration }}
       run: autobuild package
