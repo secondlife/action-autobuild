@@ -19,7 +19,7 @@ inputs:
     description: autobuild configuration
   configure-args:
     type: string
-    description: Additional arguments passed to autobuild configure 
+    description: Additional arguments passed to autobuild configure
   build-args:
     type: string
     description: Additional arguments passed to autobuild build
@@ -51,26 +51,26 @@ runs:
     - name: Setup autobuild
       uses: secondlife/setup-autobuild@v1
       if: inputs.setup-autobuild
-    
+
     - name: Cache installables
       uses: actions/cache@v3
       id: cache-installables
       with:
         path: .autobuild-installables
-        key: ${{ runner.os }}-${{ runner.arch }}-${{ inputs.configuration }}-${{ hashFiles('autobuild.xml') }} 
+        key: ${{ runner.os }}-${{ runner.arch }}-${{ inputs.configuration }}-${{ hashFiles('autobuild.xml') }}
 
     - name: Create stage dir
       shell: bash
       run: mkdir stage && cd stage
-    
+
     - name: Configure
       shell: bash
       run: autobuild configure ${{ inputs.configure-args }}
 
-    - name: Build 
+    - name: Build
       shell: bash
       run: autobuild build ${{ inputs.build-args }}
-    
+
     - name: Package
       shell: bash
       if: inputs.package
