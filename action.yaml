@@ -33,9 +33,6 @@ inputs:
     default: true
 
 runs:
-  env:
-    AUTOBUILD_ADDRSIZE: ${{ inputs.addrsize }}
-    AUTOBUILD_CONFIGURATION: ${{ inputs.configuration }}
   using: composite
   steps:
     - name: Checkout
@@ -65,13 +62,23 @@ runs:
 
     - name: Configure
       shell: bash
+      env:
+        AUTOBUILD_ADDRSIZE: ${{ inputs.addrsize }}
+        AUTOBUILD_CONFIGURATION: ${{ inputs.configuration }}
       run: autobuild configure ${{ inputs.configure-args }}
 
     - name: Build
       shell: bash
+      env:
+        AUTOBUILD_ADDRSIZE: ${{ inputs.addrsize }}
+        AUTOBUILD_CONFIGURATION: ${{ inputs.configuration }}
       run: autobuild build ${{ inputs.build-args }}
 
     - name: Package
+      id: package
       shell: bash
       if: inputs.package
+      env:
+        AUTOBUILD_ADDRSIZE: ${{ inputs.addrsize }}
+        AUTOBUILD_CONFIGURATION: ${{ inputs.configuration }}
       run: autobuild package
