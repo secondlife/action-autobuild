@@ -33,10 +33,10 @@ inputs:
     default: true
 
 runs:
-  using: composite
   env:
     AUTOBUILD_ADDRSIZE: ${{ inputs.addrsize }}
     AUTOBUILD_CONFIGURATION: ${{ inputs.configuration }}
+  using: composite
   steps:
     - name: Checkout
       uses: actions/checkout@v3
