@@ -1,0 +1,78 @@
+name: Autobuild
+description: Build and package an autobuild project
+
+inputs:
+  checkout:
+    type: boolean
+    description: Perform git checkout
+    default: true
+  setup-python:
+    type: boolean
+    description: Install python using actions/python
+    default: true
+  setup-autobuild:
+    type: boolean
+    description: Install autobuild using secondlife/setup-autobuild
+    default: true
+  configure-args:
+    type: string
+    description: Additional arguments passed to autobuild configure
+  build-args:
+    type: string
+    description: Additional arguments passed to autobuild build
+  package:
+    type: boolean
+    description: Whether to perform autobuild package
+    default: true
+
+runs:
+  using: composite
+  steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+      if: inputs.checkout
+      with:
+        fetch-depth: 0
+
+    - name: Setup python
+      uses: actions/setup-python@v4
+      if: inputs.setup-python
+      with:
+        python-version: 3.x
+
+    - name: Setup autobuild
+      uses: secondlife/setup-autobuild@v1
+      with:
+        version: signal/scm-build-id
+      if: inputs.setup-autobuild
+
+    - name: Cache installables
+      uses: actions/cache@v3
+      id: cache-installables
+      with:
+        path: .autobuild-installables
+        key: ${{ runner.os }}-${{ runner.arch }}-${{ inputs.configuration }}-${{ hashFiles('autobuild.xml') }}
+
+    - name: Create stage dir
+      shell: bash
+      run: mkdir stage && cd stage
+
+    - name: Configure
+      shell: bash
+      env:
+        AUTOBUILD_SCM: "yes"
+      run: autobuild configure ${{ inputs.configure-args }}
+
+    - name: Build
+      shell: bash
+      env:
+        AUTOBUILD_SCM: "yes"
+      run: autobuild build ${{ inputs.build-args }}
+
+    - name: Package
+      id: package
+      shell: bash
+      env:
+        AUTOBUILD_SCM: "yes"
+      if: inputs.package
+      run: autobuild package
