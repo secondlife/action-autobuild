@@ -1,0 +1,144 @@
+name: Autobuild
+description: Build and package an autobuild project
+
+inputs:
+  checkout:
+    type: boolean
+    description: Perform git checkout
+    default: true
+  checkout-build-variables:
+    type: boolean
+    description: Perform git checkout of build-variables
+    default: true
+  setup-python:
+    type: boolean
+    description: Install python using actions/python
+    default: true
+  setup-autobuild:
+    type: boolean
+    description: Install autobuild using secondlife/setup-autobuild
+    default: true
+  configure-args:
+    type: string
+    description: Additional arguments passed to autobuild configure
+  build-args:
+    type: string
+    description: Additional arguments passed to autobuild build
+  addrsize:
+    type: string
+    description: AUTOBUILD_ADDRSIZE
+    default: "64"
+  build-variables-ref:
+    type: string
+    description: build-variables repository ref
+    default: master
+  release:
+    type: boolean
+    description: Upload package to new or existing GitHub release
+    default: false
+
+outputs:
+  package-name:
+    value: ${{ steps.autobuild.outputs.package_name }}
+  package-filename:
+    value: ${{ steps.autobuild.outputs.package_filename }}
+  package-basename:
+    value: ${{ steps.autobuild.outputs.package_basename }}
+  package-md5:
+    value: ${{ steps.autobuild.outputs.package_md5 }}
+
+runs:
+  using: composite
+  steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+      if: inputs.checkout
+      with:
+        fetch-depth: 0 # checkout full history for autobuild SCM version discovery
+
+    - name: Checkout build variables
+      uses: actions/checkout@v3
+      if: inputs.checkout-build-variables
+      with:
+        repository: secondlife/build-variables
+        ref: ${{ inputs.build-variables-ref }}
+        path: .build-variables
+
+    - name: Setup python
+      uses: actions/setup-python@v4
+      if: inputs.setup-python
+      with:
+        python-version: 3.x
+
+    - name: Setup autobuild
+      uses: secondlife/setup-autobuild@v1
+      if: inputs.setup-autobuild
+
+    - name: Cache installables
+      uses: actions/cache@v3
+      id: cache-installables
+      with:
+        path: ${{ github.workspace }}/.autobuild-installables
+        key: ${{ runner.os }}-${{ runner.arch }}-${{ inputs.configuration }}-${{ hashFiles('autobuild.xml') }}
+
+    - name: Run autobuild
+      shell: bash
+      id: autobuild
+      env:
+        AUTOBUILD_VARIABLES_FILE: ${{ github.workspace }}/.build-variables/variables
+        AUTOBUILD_INSTALLABLE_CACHE: ${{ github.workspace }}/.autobuild-installables
+        AUTOBUILD_ADDRSIZE: ${{ inputs.addrsize }}
+      run: |
+        autobuild configure ${{ inputs.configure-args }}
+        autobuild build --no-configure ${{ inputs.build-args }}
+        autobuild package --results-file results.txt
+        . results.txt
+
+        package_basename="$(basename $autobuild_package_filename)"
+
+        # Set outputs
+        echo "::set-output name=package_name::$autobuild_package_name"
+        echo "::set-output name=package_filename::$autobuild_package_filename"
+        echo "::set-output name=package_basename::$package_basename"
+        echo "::set-output name=package_md5::$autobuild_package_md5"
+
+    - uses: actions/upload-artifact@v3
+      with:
+        name: ${{ steps.autobuild.outputs.package_basename }}
+        path: ${{ steps.autobuild.outputs.package_filename }}
+
+    - uses: secondlife-3p/release-action@v1
+      if: ${{ fromJSON(inputs.release) }}
+      with:
+        artifacts: ${{ steps.autobuild.outputs.package_filename }}
+        omitBodyDuringUpdate: true
+        allowUpdates: true
+
+    - name: Write summary
+      shell: bash
+      env:
+        PACKAGE_BASENAME: ${{ steps.autobuild.outputs.package_basename }}
+        PACKAGE_NAME: ${{ steps.autobuild.outputs.package_name }}
+        PACKAGE_HASH: ${{ steps.autobuild.outputs.package_md5 }}
+        HOMEPAGE: ${{ github.server_url }}/${{ github.repository }}
+        RELEASE: ${{ fromJSON(inputs.release) }}
+      run: |
+        echo "### Autobuild results: $PACKAGE_NAME" >> $GITHUB_STEP_SUMMARY
+        echo '| | |' >> $GITHUB_STEP_SUMMARY
+        echo '|-|-|' >> $GITHUB_STEP_SUMMARY
+        echo "|file |$PACKAGE_BASENAME|" >> $GITHUB_STEP_SUMMARY
+        echo "|md5  |$PACKAGE_HASH|" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+
+        if [[ $RELEASE == 'true' ]]; then
+          VERSION="${GITHUB_REF#refs/*/}"
+          RELEASE_URL="$HOMEPAGE/releases/tag/$VERSION"
+          PACKAGE_URL="$HOMEPAGE/releases/download/$VERSION/$PACKAGE_BASENAME"
+          echo "#### :dizzy: Release info" >> $GITHUB_STEP_SUMMARY
+          echo "This build has been published as [$VERSION]($RELEASE_URL)." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Add as a new dependency:" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "autobuild installables add $PACKAGE_NAME url=$PACKAGE_URL hash=$PACKAGE_HASH" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+        fi
