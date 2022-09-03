@@ -16,6 +16,34 @@ jobs:
       AUTOBUILD_CONFIGURATION: default
     steps:
       - uses: actions/checkout@v3
+
       - uses: ./
+        id: autobuild
         with:
           checkout: false
+
+      - name: Check outputs
+        shell: bash
+        env:
+          PACKAGE_MD5: ${{ steps.autobuild.outputs.package-md5 }}
+          PACKAGE_METADATA: ${{ steps.autobuild.outputs.package-metadata }}
+          PACKAGE_FILENAME: ${{ steps.autobuild.outputs.package-filename }}
+        run: |
+          if [[ -z "$PACKAGE_MD5" ]]; then
+            echo "package-md5 output not set" >&2
+            exit 1
+          else
+            echo "package-md5=$PACKAGE_MD5"
+          fi
+          if [[ -z "$PACKAGE_METADATA" ]]; then
+            echo "package-metadata output not set" >&2
+            exit 1
+          else
+            echo "package-metadata=$PACKAGE_METADATA"
+          fi
+          if [[ -z "$PACKAGE_FILENAME" ]]; then
+            echo "package-filename output not set" >&2
+            exit 1
+          else
+            echo "package-filename=$PACKAGE_FILENAME"
+          fi

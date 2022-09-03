@@ -25,6 +25,14 @@ inputs:
     description: Whether to perform autobuild package
     default: true
 
+outputs:
+  package-filename:
+    value: ${{ steps.package.outputs.filename }}
+  package-metadata:
+    value: ${{ steps.package.outputs.metadata }}
+  package-md5:
+    value: ${{ steps.package.outputs.md5 }}
+
 runs:
   using: composite
   steps:
@@ -75,4 +83,9 @@ runs:
       env:
         AUTOBUILD_SCM: "yes"
       if: inputs.package
-      run: autobuild package
+      run: |
+        autobuild package --results-file results.txt
+        source results.txt
+        echo "::set-output name=filename::$(echo $autobuild_package_filename)"
+        echo "::set-output name=md5::$(echo $autobuild_package_md5)"
+        echo "::set-output name=metadata::$(echo $autobuild_package_metadata)"
