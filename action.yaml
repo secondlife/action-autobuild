@@ -90,6 +90,7 @@ runs:
         AUTOBUILD_ADDRSIZE: ${{ inputs.addrsize }}
       run: |
         autobuild configure ${{ inputs.configure-args }}
+        autobuild install
         autobuild build --no-configure ${{ inputs.build-args }}
         autobuild package --results-file results.txt
         . results.txt
