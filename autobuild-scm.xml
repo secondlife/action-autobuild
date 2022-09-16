@@ -11,10 +11,10 @@
       <string>MIT</string>
       <key>license_file</key>
       <string>LICENSE</string>
-      <key>version_file</key>
-      <string>version.txt</string>
       <key>name</key>
       <string>action-autobuild</string>
+      <key>use_scm_version</key>
+      <boolean>true</boolean>
       <key>platforms</key>
       <map>
         <key>common</key>

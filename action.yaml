@@ -32,10 +32,14 @@ inputs:
     type: string
     description: build-variables repository ref
     default: master
-  release:
-    type: boolean
-    description: Upload package to new or existing GitHub release
-    default: false
+  build-id:
+    type: string
+    description: "Built id (default: commit sha)"
+    default: SHA
+  file:
+    type: string
+    description: "Target autobuild.xml file"
+    default: autobuild.xml
 
 outputs:
   package-name:
@@ -44,6 +48,8 @@ outputs:
     value: ${{ steps.autobuild.outputs.package_filename }}
   package-basename:
     value: ${{ steps.autobuild.outputs.package_basename }}
+  package-platform:
+    value: ${{ steps.autobuild.outputs.package_platform }}
   package-md5:
     value: ${{ steps.autobuild.outputs.package_md5 }}
 
@@ -51,21 +57,38 @@ runs:
   using: composite
   steps:
     - name: Disable autocrlf
+      if: inputs.checkout
       shell: bash
       env:
         WINDOWS: ${{ runner.os == 'Windows' }}
       run: |
         if [[ $WINDOWS == 'true' ]]; then
-          git config --system core.autocrlf false
-        else
-          sudo git config --system core.autocrlf false
+          git config --global core.autocrlf input
         fi
 
     - name: Checkout
       uses: actions/checkout@v3
       if: inputs.checkout
-      with:
-        fetch-depth: 0 # checkout full history for autobuild SCM version discovery
+
+    # Checkout tags for SCM version support
+    - name: Checkout tags
+      if: inputs.checkout
+      shell: bash
+      run: |
+        git fetch --prune --unshallow
+        git fetch --depth=1 origin +refs/tags/*:refs/tags/*
+
+    # Work around the fact that in the context of a pull request github.sha
+    # references a dynamic merge commit rather than the branch head
+    # https://frontside.com/blog/2020-05-26-github-actions-pull_request/#how-does-pull_request-affect-actionscheckout
+    - name: Determine SHA
+      id: sha
+      shell: bash
+      env:
+        SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      run: |
+        echo "::set-output name=long::$SHA"
+        echo "::set-output name=short::${SHA:0:7}"
 
     - name: Checkout build variables
       uses: actions/checkout@v3
@@ -113,14 +136,32 @@ runs:
       shell: ${{ steps.shell.outputs.shell }}
       id: autobuild
       env:
-        WORKSPACE: ${{ github.workspace }}
-        CONFIGURATION: ${{ inputs.configuration }}
-        AUTOBUILD_VARIABLES_FILE: ${{ github.workspace }}/.build-variables/variables
-        AUTOBUILD_INSTALLABLE_CACHE: ${{ github.workspace }}/.autobuild-installables
+        AUTOBUILD_CONFIG_FILE: ${{ inputs.file }}
+        AUTOBUILD: autobuild # Expected by some 3p build scripts
         AUTOBUILD_ADDRSIZE: ${{ inputs.addrsize }}
+        AUTOBUILD_INSTALLABLE_CACHE: ${{ github.workspace }}/.autobuild-installables
+        AUTOBUILD_VARIABLES_FILE: ${{ github.workspace }}/.build-variables/variables
+        BUILD_ID: ${{ inputs.build-id }}
+        CONFIGURATION: ${{ inputs.configuration }}
+        SHORT_SHA: ${{ inputs.build-id || steps.sha.outputs.short }}
+        WORKSPACE: ${{ github.workspace }}
       run: |
         # Change into github.workspace, as cygwin shell places us in $HOME
         cd "$WORKSPACE"
+
+        use_scm_version="$(autobuild print --json | jq -r .package_description.use_scm_version)"
+        use_scm_version="$(echo $use_scm_version | tr '[:upper:]' '[:lower:]')"
+
+        # Set AUTOBUILD_BUILD_ID
+        if [[ "$BUILD_ID" == "SHA" ]]; then
+          # Only default build ID to SHA if SCM version is disabled
+          if [[ "$use_scm_version" != "true" ]]; then
+            export AUTOBUILD_BUILD_ID="$SHORT_SHA"
+          fi
+        elif [[ ! -z "$BUILD_ID" ]]; then
+          # Allow an explicitly set build ID to be used
+          export AUTOBUILD_BUILD_ID="$BUILD_ID"
+        fi
 
         if [[ ! -z "$CONFIGURATION" ]]; then
           export AUTOBUILD_CONFIGURATION="$CONFIGURATION"
@@ -129,55 +170,26 @@ runs:
         autobuild configure ${{ inputs.configure-args }}
         autobuild install
         autobuild build --no-configure ${{ inputs.build-args }}
-        autobuild package --results-file results.txt
-        . results.txt
+        autobuild package --results-file autobuild-results.txt
+        autobuild graph --type mermaid > autobuild-graph.mermaid
+
+        . autobuild-results.txt
 
         package_basename="$(basename $autobuild_package_filename)"
+        package_basename_no_ext="$(basename $autobuild_package_filename .tar.bz2)"
 
         # Set outputs
-        echo "::set-output name=package_name::$autobuild_package_name"
-        echo "::set-output name=package_filename::$autobuild_package_filename"
         echo "::set-output name=package_basename::$package_basename"
+        echo "::set-output name=package_basename_no_ext::$package_basename_no_ext"
+        echo "::set-output name=package_filename::$autobuild_package_filename"
         echo "::set-output name=package_md5::$autobuild_package_md5"
+        echo "::set-output name=package_name::$autobuild_package_name"
+        echo "::set-output name=package_platform=$autobuild_package_platform"
 
     - uses: actions/upload-artifact@v3
       with:
-        name: ${{ steps.autobuild.outputs.package_basename }}
-        path: ${{ steps.autobuild.outputs.package_filename }}
-
-    - uses: secondlife-3p/release-action@v1
-      if: ${{ fromJSON(inputs.release) }}
-      with:
-        artifacts: ${{ steps.autobuild.outputs.package_filename }}
-        omitBodyDuringUpdate: true
-        allowUpdates: true
-
-    - name: Write summary
-      shell: bash
-      env:
-        PACKAGE_BASENAME: ${{ steps.autobuild.outputs.package_basename }}
-        PACKAGE_NAME: ${{ steps.autobuild.outputs.package_name }}
-        PACKAGE_HASH: ${{ steps.autobuild.outputs.package_md5 }}
-        HOMEPAGE: ${{ github.server_url }}/${{ github.repository }}
-        RELEASE: ${{ fromJSON(inputs.release) }}
-      run: |
-        echo "### Autobuild results: $PACKAGE_NAME" >> $GITHUB_STEP_SUMMARY
-
-        echo '|     |                 |' >> $GITHUB_STEP_SUMMARY
-        echo '|-----|-----------------|' >> $GITHUB_STEP_SUMMARY
-        echo "|file |$PACKAGE_BASENAME|" >> $GITHUB_STEP_SUMMARY
-        echo "|md5  |$PACKAGE_HASH    |" >> $GITHUB_STEP_SUMMARY
-        echo ""                          >> $GITHUB_STEP_SUMMARY
-
-        if [[ $RELEASE == 'true' ]]; then
-          VERSION="${GITHUB_REF#refs/*/}"
-          RELEASE_URL="$HOMEPAGE/releases/tag/$VERSION"
-          PACKAGE_URL="$HOMEPAGE/releases/download/$VERSION/$PACKAGE_BASENAME"
-          echo "#### :dizzy: Release info"                                                    >> $GITHUB_STEP_SUMMARY
-          echo "This build has been published as [$VERSION]($RELEASE_URL)."                   >> $GITHUB_STEP_SUMMARY
-          echo ""                                                                             >> $GITHUB_STEP_SUMMARY
-          echo "Add as a new dependency:"                                                     >> $GITHUB_STEP_SUMMARY
-          echo '```'                                                                          >> $GITHUB_STEP_SUMMARY
-          echo "autobuild installables add $PACKAGE_NAME url=$PACKAGE_URL hash=$PACKAGE_HASH" >> $GITHUB_STEP_SUMMARY
-          echo '```'                                                                          >> $GITHUB_STEP_SUMMARY
-        fi
+        name: ${{ steps.autobuild.outputs.package_basename_no_ext }}
+        path: |
+          ${{ steps.autobuild.outputs.package_filename }}
+          autobuild-results.txt
+          autobuild-graph.mermaid
