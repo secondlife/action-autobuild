@@ -50,6 +50,17 @@ outputs:
 runs:
   using: composite
   steps:
+    - name: Disable autocrlf
+      shell: bash
+      env:
+        WINDOWS: ${{ runner.os == 'Windows' }}
+      run: |
+        if [[ $WINDOWS == 'true' ]]; then
+          git config --system core.autocrlf false
+        else
+          sudo git config --system core.autocrlf false
+        fi
+
     - name: Checkout
       uses: actions/checkout@v3
       if: inputs.checkout
@@ -74,6 +85,22 @@ runs:
       uses: secondlife/setup-autobuild@v1
       if: inputs.setup-autobuild
 
+    - name: Setup cygwin
+      if: ${{ runner.os == 'Windows' }}
+      uses: secondlife/setup-cygwin@v1
+
+    - name: Determine shell
+      id: shell
+      shell: bash
+      env:
+        WINDOWS: ${{ runner.os == 'Windows' }}
+      run: |
+        if [[ $WINDOWS == 'true' ]]; then
+          echo "::set-output name=shell::C:\cygwin64\bin\bash.exe --login --norc -eo pipefail -o igncr '{0}'"
+        else
+          echo '::set-output name=shell::bash'
+        fi
+
     - name: Cache installables
       uses: actions/cache@v3
       id: cache-installables
@@ -82,13 +109,17 @@ runs:
         key: ${{ runner.os }}-${{ runner.arch }}-${{ inputs.configuration }}-${{ hashFiles('autobuild.xml') }}
 
     - name: Run autobuild
-      shell: bash
+      shell: ${{ steps.shell.outputs.shell }}
       id: autobuild
       env:
+        WORKSPACE: ${{ github.workspace }}
         AUTOBUILD_VARIABLES_FILE: ${{ github.workspace }}/.build-variables/variables
         AUTOBUILD_INSTALLABLE_CACHE: ${{ github.workspace }}/.autobuild-installables
         AUTOBUILD_ADDRSIZE: ${{ inputs.addrsize }}
       run: |
+        # Change into github.workspace, as cygwin shell places us in $HOME
+        cd "$WORKSPACE"
+
         autobuild configure ${{ inputs.configure-args }}
         autobuild install
         autobuild build --no-configure ${{ inputs.build-args }}
