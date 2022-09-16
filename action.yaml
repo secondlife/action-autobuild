@@ -82,7 +82,8 @@ runs:
         python-version: 3.x
 
     - name: Setup autobuild
-      uses: secondlife/setup-autobuild@v1
+      shell: bash
+      run: pip install "git+https://github.com/secondlife/autobuild.git@v3"
       if: inputs.setup-autobuild
 
     - name: Setup cygwin
@@ -113,12 +114,17 @@ runs:
       id: autobuild
       env:
         WORKSPACE: ${{ github.workspace }}
+        CONFIGURATION: ${{ inputs.configuration }}
         AUTOBUILD_VARIABLES_FILE: ${{ github.workspace }}/.build-variables/variables
         AUTOBUILD_INSTALLABLE_CACHE: ${{ github.workspace }}/.autobuild-installables
         AUTOBUILD_ADDRSIZE: ${{ inputs.addrsize }}
       run: |
         # Change into github.workspace, as cygwin shell places us in $HOME
         cd "$WORKSPACE"
+
+        if [[ ! -z "$CONFIGURATION" ]]; then
+          export AUTOBUILD_CONFIGURATION="$CONFIGURATION"
+        fi
 
         autobuild configure ${{ inputs.configure-args }}
         autobuild install
@@ -156,21 +162,22 @@ runs:
         RELEASE: ${{ fromJSON(inputs.release) }}
       run: |
         echo "### Autobuild results: $PACKAGE_NAME" >> $GITHUB_STEP_SUMMARY
-        echo '| | |' >> $GITHUB_STEP_SUMMARY
-        echo '|-|-|' >> $GITHUB_STEP_SUMMARY
+
+        echo '|     |                 |' >> $GITHUB_STEP_SUMMARY
+        echo '|-----|-----------------|' >> $GITHUB_STEP_SUMMARY
         echo "|file |$PACKAGE_BASENAME|" >> $GITHUB_STEP_SUMMARY
-        echo "|md5  |$PACKAGE_HASH|" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "|md5  |$PACKAGE_HASH    |" >> $GITHUB_STEP_SUMMARY
+        echo ""                          >> $GITHUB_STEP_SUMMARY
 
         if [[ $RELEASE == 'true' ]]; then
           VERSION="${GITHUB_REF#refs/*/}"
           RELEASE_URL="$HOMEPAGE/releases/tag/$VERSION"
           PACKAGE_URL="$HOMEPAGE/releases/download/$VERSION/$PACKAGE_BASENAME"
-          echo "#### :dizzy: Release info" >> $GITHUB_STEP_SUMMARY
-          echo "This build has been published as [$VERSION]($RELEASE_URL)." >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Add as a new dependency:" >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "#### :dizzy: Release info"                                                    >> $GITHUB_STEP_SUMMARY
+          echo "This build has been published as [$VERSION]($RELEASE_URL)."                   >> $GITHUB_STEP_SUMMARY
+          echo ""                                                                             >> $GITHUB_STEP_SUMMARY
+          echo "Add as a new dependency:"                                                     >> $GITHUB_STEP_SUMMARY
+          echo '```'                                                                          >> $GITHUB_STEP_SUMMARY
           echo "autobuild installables add $PACKAGE_NAME url=$PACKAGE_URL hash=$PACKAGE_HASH" >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo '```'                                                                          >> $GITHUB_STEP_SUMMARY
         fi
