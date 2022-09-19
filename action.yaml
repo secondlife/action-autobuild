@@ -69,14 +69,8 @@ runs:
     - name: Checkout
       uses: actions/checkout@v3
       if: inputs.checkout
-
-    # Checkout tags for SCM version support
-    - name: Checkout tags
-      if: inputs.checkout
-      shell: bash
-      run: |
-        git fetch --prune --unshallow
-        git fetch --depth=1 origin +refs/tags/*:refs/tags/*
+      with:
+        fetch-depth: 0 # Fetch all history for SCM version
 
     # Work around the fact that in the context of a pull request github.sha
     # references a dynamic merge commit rather than the branch head
