@@ -15,7 +15,26 @@ jobs:
     env:
       AUTOBUILD_CONFIGURATION: default
     steps:
+
+      - name: Disable autocrlf
+        shell: bash
+        env:
+          WINDOWS: ${{ runner.os == 'Windows' }}
+        run: |
+          if [[ $WINDOWS == 'true' ]]; then
+            git config --global core.autocrlf input
+          fi
+
       - uses: actions/checkout@v3
+
       - uses: ./
         with:
           checkout: false
+
+      - shell: bash
+        run : rm -rf stage
+
+      - uses: ./
+        with:
+          checkout: false
+          file: autobuild-scm.xml
