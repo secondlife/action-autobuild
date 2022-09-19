@@ -143,7 +143,7 @@ runs:
         AUTOBUILD_VARIABLES_FILE: ${{ github.workspace }}/.build-variables/variables
         BUILD_ID: ${{ inputs.build-id }}
         CONFIGURATION: ${{ inputs.configuration }}
-        SHORT_SHA: ${{ inputs.build-id || steps.sha.outputs.short }}
+        SHORT_SHA: ${{ steps.sha.outputs.short }}
         WORKSPACE: ${{ github.workspace }}
       run: |
         # Change into github.workspace, as cygwin shell places us in $HOME
