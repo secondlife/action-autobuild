@@ -74,11 +74,12 @@ runs:
       uses: actions/checkout@v3
       if: inputs.checkout
       with:
+        # Work around the fact that in the context of a pull request github.sha
+        # references a dynamic merge commit rather than the branch head
+        # https://frontside.com/blog/2020-05-26-github-actions-pull_request/#how-does-pull_request-affect-actionscheckout
+        ref: ${{ github.event.pull_request.head.sha || github.sha }}
         fetch-depth: 0 # Fetch all history for SCM version
 
-    # Work around the fact that in the context of a pull request github.sha
-    # references a dynamic merge commit rather than the branch head
-    # https://frontside.com/blog/2020-05-26-github-actions-pull_request/#how-does-pull_request-affect-actionscheckout
     - name: Determine SHA
       id: sha
       shell: bash
