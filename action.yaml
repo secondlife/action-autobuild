@@ -40,6 +40,10 @@ inputs:
     type: string
     description: "Target autobuild.xml file"
     default: autobuild.xml
+  autobuild-ref:
+    type: string
+    description: Ref to use when checking out autobuild
+    default: v3
 
 outputs:
   package-name:
@@ -100,7 +104,9 @@ runs:
 
     - name: Setup autobuild
       shell: bash
-      run: pip install "git+https://github.com/secondlife/autobuild.git@v3"
+      env:
+        REF: ${{ inputs.autobuild-ref }}
+      run: pip install "git+https://github.com/secondlife/autobuild.git@$REF"
       if: inputs.setup-autobuild
 
     - name: Setup cygwin
