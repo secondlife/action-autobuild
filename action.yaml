@@ -136,6 +136,7 @@ runs:
       shell: ${{ steps.shell.outputs.shell }}
       id: autobuild
       env:
+        AUTOBUILD_VCS_INFO: "true"
         AUTOBUILD_CONFIG_FILE: ${{ inputs.file }}
         AUTOBUILD: autobuild # Expected by some 3p build scripts
         AUTOBUILD_ADDRSIZE: ${{ inputs.addrsize }}
