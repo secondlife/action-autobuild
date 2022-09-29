@@ -172,26 +172,34 @@ runs:
         autobuild configure ${{ inputs.configure-args }}
         autobuild install
         autobuild build --no-configure ${{ inputs.build-args }}
-        autobuild package --results-file autobuild-results.txt
+        autobuild package --results-file autobuild-results.json
         autobuild graph --type mermaid > autobuild-graph.mermaid
 
-        . autobuild-results.txt
+    - name: Read results
+      id: results
+      shell: bash
+      run: |
+        package_filename="$(cat autobuild-results.json | jq -j .autobuild_package_filename)"
+        package_md5="$(cat autobuild-results.json | jq -j .autobuild_package_md5)"
+        package_platform="$(cat autobuild-results.json | jq -j .autobuild_package_platform)"
+        package_name="$(cat autobuild-results.json | jq -j .autobuild_package_name)"
 
-        package_basename="$(basename $autobuild_package_filename)"
-        package_basename_no_ext="$(basename $autobuild_package_filename .tar.bz2)"
+        # Get basename of package (needs to work for windows and *nix)
+        package_basename="${package_filename##*/}"
+        package_basename="${package_basename##*\\}"
+        package_basename_no_ext="$(basename $package_basename .tar.bz2)"
 
-        # Set outputs
         echo "::set-output name=package_basename::$package_basename"
         echo "::set-output name=package_basename_no_ext::$package_basename_no_ext"
-        echo "::set-output name=package_filename::$autobuild_package_filename"
-        echo "::set-output name=package_md5::$autobuild_package_md5"
-        echo "::set-output name=package_name::$autobuild_package_name"
-        echo "::set-output name=package_platform=$autobuild_package_platform"
+        echo "::set-output name=package_filename::$package_filename"
+        echo "::set-output name=package_md5::$package_md5"
+        echo "::set-output name=package_name::$package_name"
+        echo "::set-output name=package_platform=$package_platform"
 
     - uses: actions/upload-artifact@v3
       with:
-        name: ${{ steps.autobuild.outputs.package_basename_no_ext }}
+        name: ${{ steps.results.outputs.package_basename_no_ext }}
         path: |
           ${{ steps.autobuild.outputs.package_filename }}
-          autobuild-results.txt
+          autobuild-results.json
           autobuild-graph.mermaid
