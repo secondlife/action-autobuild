@@ -145,7 +145,7 @@ runs:
           alias python='winpty python.exe'
         fi
 
-        use_scm_version="$(autobuild print --json | jq -r .package_description.use_scm_version)"
+        use_scm_version="$(autobuild print --json | jq -j .package_description.use_scm_version)"
         use_scm_version="$(echo $use_scm_version | tr '[:upper:]' '[:lower:]')"
 
         # Set AUTOBUILD_BUILD_ID
@@ -173,10 +173,15 @@ runs:
       id: results
       shell: bash
       run: |
+        cat autobuild-results.json
+        cat autobuild-results.json | jq -j .autobuild_package_filename
+
         package_filename="$(cat autobuild-results.json | jq -j .autobuild_package_filename)"
         package_md5="$(cat autobuild-results.json | jq -j .autobuild_package_md5)"
         package_platform="$(cat autobuild-results.json | jq -j .autobuild_package_platform)"
         package_name="$(cat autobuild-results.json | jq -j .autobuild_package_name)"
+
+        echo "package_filename=$package_filename"
 
         # Get basename of package (needs to work for windows and *nix)
         package_basename="${package_filename##*/}"
