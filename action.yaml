@@ -84,7 +84,7 @@ runs:
       if: inputs.checkout
       run: |
         git fetch --prune --unshallow
-        git fetch --depth=1 origin +refs/tags/*:refs/tags/*
+        git fetch --depth=1 origin +refs/tags/*:refs/tags/* || echo "No tags to check out"
 
     - name: Create short SHA
       id: sha
