@@ -80,6 +80,7 @@ runs:
         # fetch-depth: 0 # Fetch all history for SCM version
 
     - name: Get history and tags for SCM versioning to work
+      shell: bash
       if: inputs.checkout
       run: |
         git fetch --prune --unshallow
