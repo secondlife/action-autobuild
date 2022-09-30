@@ -40,10 +40,10 @@ inputs:
     type: string
     description: "Target autobuild.xml file"
     default: autobuild.xml
-  autobuild-ref:
+  autobuild-version:
     type: string
-    description: Ref to use when checking out autobuild
-    default: v3
+    description: Version of autobuild to install
+    default: v3.6.0
 
 outputs:
   package-name:
@@ -56,12 +56,17 @@ outputs:
     value: ${{ steps.autobuild.outputs.package_platform }}
   package-md5:
     value: ${{ steps.autobuild.outputs.package_md5 }}
+  package-blake2b:
+    value: ${{ steps.autobuild.outputs.package_blake2b }}
+  package-sha1:
+    value: ${{ steps.autobuild.outputs.package_sha1 }}
+  package-sha256:
+    value: ${{ steps.autobuild.outputs.package_sha256 }}
 
 runs:
   using: composite
   steps:
     - name: Disable autocrlf
-      if: inputs.checkout
       shell: bash
       env:
         WINDOWS: ${{ runner.os == 'Windows' }}
@@ -80,7 +85,7 @@ runs:
         ref: ${{ github.event.pull_request.head.sha || github.sha }}
         fetch-depth: 0 # Fetch all history for SCM version
 
-    - name: Determine SHA
+    - name: Create short SHA
       id: sha
       shell: bash
       env:
@@ -106,9 +111,9 @@ runs:
     - name: Setup autobuild
       shell: bash
       env:
-        REF: ${{ inputs.autobuild-ref }}
-      run: pip install "git+https://github.com/secondlife/autobuild.git@$REF"
+        VERSION: ${{ inputs.autobuild-version }}
       if: inputs.setup-autobuild
+      run: pip install autobuild==$VERSION
 
     - name: Setup cygwin
       if: ${{ runner.os == 'Windows' }}
@@ -147,11 +152,12 @@ runs:
         CONFIGURATION: ${{ inputs.configuration }}
         SHORT_SHA: ${{ steps.sha.outputs.short }}
         WORKSPACE: ${{ github.workspace }}
+        WINDOWS: ${{ runner.os == 'Windows' }}
       run: |
         # Change into github.workspace, as cygwin shell places us in $HOME
         cd "$WORKSPACE"
 
-        use_scm_version="$(autobuild print --json | jq -r .package_description.use_scm_version)"
+        use_scm_version="$(autobuild print --json | jq -j .package_description.use_scm_version)"
         use_scm_version="$(echo $use_scm_version | tr '[:upper:]' '[:lower:]')"
 
         # Set AUTOBUILD_BUILD_ID
@@ -169,10 +175,10 @@ runs:
           export AUTOBUILD_CONFIGURATION="$CONFIGURATION"
         fi
 
-        autobuild configure ${{ inputs.configure-args }}
         autobuild install
+        autobuild configure ${{ inputs.configure-args }}
         autobuild build --no-configure ${{ inputs.build-args }}
-        autobuild package --results-file autobuild-results.json
+        autobuild package --results-file autobuild-results.json --archive-format tzst
         autobuild graph --type mermaid > autobuild-graph.mermaid
 
     - name: Read results
@@ -181,18 +187,24 @@ runs:
       run: |
         package_filename="$(cat autobuild-results.json | jq -j .autobuild_package_filename)"
         package_md5="$(cat autobuild-results.json | jq -j .autobuild_package_md5)"
+        package_sha1="$(cat autobuild-results.json | jq -j .autobuild_package_sha1)"
+        package_sha256="$(cat autobuild-results.json | jq -j .autobuild_package_sha256)"
+        package_blake2b="$(cat autobuild-results.json | jq -j .autobuild_package_blake2b)"
         package_platform="$(cat autobuild-results.json | jq -j .autobuild_package_platform)"
         package_name="$(cat autobuild-results.json | jq -j .autobuild_package_name)"
 
         # Get basename of package (needs to work for windows and *nix)
         package_basename="${package_filename##*/}"
         package_basename="${package_basename##*\\}"
-        package_basename_no_ext="$(basename $package_basename .tar.bz2)"
+        package_basename_no_ext="$(basename $package_basename .tar.zst)"
 
         echo "::set-output name=package_basename::$package_basename"
         echo "::set-output name=package_basename_no_ext::$package_basename_no_ext"
         echo "::set-output name=package_filename::$package_filename"
         echo "::set-output name=package_md5::$package_md5"
+        echo "::set-output name=package_sha1::$package_sha1"
+        echo "::set-output name=package_sha256::$package_sha256"
+        echo "::set-output name=package_blake2b::$package_blake2b"
         echo "::set-output name=package_name::$package_name"
         echo "::set-output name=package_platform=$package_platform"
 
@@ -200,6 +212,6 @@ runs:
       with:
         name: ${{ steps.results.outputs.package_basename_no_ext }}
         path: |
-          ${{ steps.autobuild.outputs.package_filename }}
+          ${{ steps.results.outputs.package_filename }}
           autobuild-results.json
           autobuild-graph.mermaid
