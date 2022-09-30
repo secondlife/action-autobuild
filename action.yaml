@@ -40,10 +40,10 @@ inputs:
     type: string
     description: "Target autobuild.xml file"
     default: autobuild.xml
-  autobuild-ref:
+  autobuild-version:
     type: string
-    description: Ref to use when checking out autobuild
-    default: v3
+    description: Version of autobuild to install
+    default: v3.5.1
 
 outputs:
   package-name:
@@ -61,7 +61,6 @@ runs:
   using: composite
   steps:
     - name: Disable autocrlf
-      if: inputs.checkout
       shell: bash
       env:
         WINDOWS: ${{ runner.os == 'Windows' }}
@@ -78,9 +77,15 @@ runs:
         # references a dynamic merge commit rather than the branch head
         # https://frontside.com/blog/2020-05-26-github-actions-pull_request/#how-does-pull_request-affect-actionscheckout
         ref: ${{ github.event.pull_request.head.sha || github.sha }}
-        fetch-depth: 0 # Fetch all history for SCM version
+        # fetch-depth: 0 # Fetch all history for SCM version
 
-    - name: Determine SHA
+    - name: Get history and tags for SCM versioning to work
+      if: inputs.checkout
+      run: |
+        git fetch --prune --unshallow
+        git fetch --depth=1 origin +refs/tags/*:refs/tags/*
+
+    - name: Create short SHA
       id: sha
       shell: bash
       env:
@@ -106,25 +111,9 @@ runs:
     - name: Setup autobuild
       shell: bash
       env:
-        REF: ${{ inputs.autobuild-ref }}
-      run: pip install "git+https://github.com/secondlife/autobuild.git@$REF"
+        VERSION: ${{ inputs.autobuild-version }}
       if: inputs.setup-autobuild
-
-    - name: Setup cygwin
-      if: ${{ runner.os == 'Windows' }}
-      uses: secondlife/setup-cygwin@v1
-
-    - name: Determine shell
-      id: shell
-      shell: bash
-      env:
-        WINDOWS: ${{ runner.os == 'Windows' }}
-      run: |
-        if [[ $WINDOWS == 'true' ]]; then
-          echo "::set-output name=shell::C:\cygwin64\bin\bash.exe --login --norc -eo pipefail -o igncr '{0}'"
-        else
-          echo '::set-output name=shell::bash'
-        fi
+      run: pip install autobuild==$VERSION
 
     - name: Cache installables
       uses: actions/cache@v3
@@ -134,7 +123,7 @@ runs:
         key: ${{ runner.os }}-${{ runner.arch }}-${{ inputs.configuration }}-${{ hashFiles('autobuild.xml') }}
 
     - name: Run autobuild
-      shell: ${{ steps.shell.outputs.shell }}
+      shell: bash
       id: autobuild
       env:
         AUTOBUILD_VCS_INFO: "true"
@@ -147,9 +136,13 @@ runs:
         CONFIGURATION: ${{ inputs.configuration }}
         SHORT_SHA: ${{ steps.sha.outputs.short }}
         WORKSPACE: ${{ github.workspace }}
+        WINDOWS: ${{ runner.os == 'Windows' }}
       run: |
-        # Change into github.workspace, as cygwin shell places us in $HOME
-        cd "$WORKSPACE"
+        # Fix windows-python on mingw
+        if [[ "$WINDOWS" == "true" ]]; then
+          echo "alias python='winpty python.exe'" >> ~/.bashrc
+          alias python='winpty python.exe'
+        fi
 
         use_scm_version="$(autobuild print --json | jq -r .package_description.use_scm_version)"
         use_scm_version="$(echo $use_scm_version | tr '[:upper:]' '[:lower:]')"
@@ -172,7 +165,7 @@ runs:
         autobuild configure ${{ inputs.configure-args }}
         autobuild install
         autobuild build --no-configure ${{ inputs.build-args }}
-        autobuild package --results-file autobuild-results.json
+        autobuild package --results-file autobuild-results.json --archive-format tzst
         autobuild graph --type mermaid > autobuild-graph.mermaid
 
     - name: Read results
@@ -187,7 +180,7 @@ runs:
         # Get basename of package (needs to work for windows and *nix)
         package_basename="${package_filename##*/}"
         package_basename="${package_basename##*\\}"
-        package_basename_no_ext="$(basename $package_basename .tar.bz2)"
+        package_basename_no_ext="$(basename $package_basename .tar.zst)"
 
         echo "::set-output name=package_basename::$package_basename"
         echo "::set-output name=package_basename_no_ext::$package_basename_no_ext"
