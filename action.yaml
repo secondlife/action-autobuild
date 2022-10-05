@@ -44,6 +44,9 @@ inputs:
     type: string
     description: Version of autobuild to install
     default: v3.6.0
+  cygwin-packages:
+    type: string
+    description: Additional cygwin packages to install
 
 outputs:
   package-name:
@@ -119,6 +122,8 @@ runs:
     - name: Setup cygwin
       if: ${{ runner.os == 'Windows' }}
       uses: secondlife/setup-cygwin@v1
+      with:
+        packages: ${{ inputs.cygwin-packages }}
 
     - name: Determine shell
       id: shell
