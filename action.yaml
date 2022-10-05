@@ -84,6 +84,7 @@ runs:
         # https://frontside.com/blog/2020-05-26-github-actions-pull_request/#how-does-pull_request-affect-actionscheckout
         ref: ${{ github.event.pull_request.head.sha || github.sha }}
         fetch-depth: 0 # Fetch all history for SCM version
+        submodules: recursive
 
     - name: Create short SHA
       id: sha
