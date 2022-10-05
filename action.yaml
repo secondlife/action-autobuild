@@ -155,8 +155,12 @@ runs:
         WORKSPACE: ${{ github.workspace }}
         WINDOWS: ${{ runner.os == 'Windows' }}
       run: |
-        # Change into github.workspace, as cygwin shell places us in $HOME
-        cd "$WORKSPACE"
+        if [[ $WINDOWS == 'true' ]]; then
+          # Ensure GITHUB_PATH is added to cygwin path
+          export PATH="$PATH:$GITHUB_PATH"
+          # Change into github.workspace, as cygwin shell places us in $HOME
+          cd "$WORKSPACE"
+        fi
 
         use_scm_version="$(autobuild print --json | jq -j .package_description.use_scm_version)"
         use_scm_version="$(echo $use_scm_version | tr '[:upper:]' '[:lower:]')"
