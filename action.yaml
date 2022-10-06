@@ -43,7 +43,7 @@ inputs:
   autobuild-version:
     type: string
     description: Version of autobuild to install
-    default: v3.6.0
+    default: v3.7.0
   cygwin-packages:
     type: string
     description: Additional cygwin packages to install
