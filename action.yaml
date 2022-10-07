@@ -47,6 +47,12 @@ inputs:
   cygwin-packages:
     type: string
     description: Additional cygwin packages to install
+  platform:
+    type: string
+    description: Autobuild platform
+  configuration:
+    type: string
+    description: Autobuild configuration
 
 outputs:
   package-name:
@@ -148,17 +154,18 @@ runs:
       shell: ${{ steps.shell.outputs.shell }}
       id: autobuild
       env:
-        AUTOBUILD_VCS_INFO: "true"
-        AUTOBUILD_CONFIG_FILE: ${{ inputs.file }}
         AUTOBUILD: autobuild # Expected by some 3p build scripts
         AUTOBUILD_ADDRSIZE: ${{ inputs.addrsize }}
+        AUTOBUILD_CONFIG_FILE: ${{ inputs.file }}
         AUTOBUILD_INSTALLABLE_CACHE: ${{ github.workspace }}/.autobuild-installables
         AUTOBUILD_VARIABLES_FILE: ${{ github.workspace }}/.build-variables/variables
+        AUTOBUILD_VCS_INFO: "true"
         BUILD_ID: ${{ inputs.build-id }}
         CONFIGURATION: ${{ inputs.configuration }}
+        PLATFORM: ${{ inputs.platform }}
         SHORT_SHA: ${{ steps.sha.outputs.short }}
-        WORKSPACE: ${{ github.workspace }}
         WINDOWS: ${{ runner.os == 'Windows' }}
+        WORKSPACE: ${{ github.workspace }}
       run: |
         # Change into github.workspace, as cygwin shell places us in $HOME
         cd "$WORKSPACE"
@@ -179,6 +186,10 @@ runs:
 
         if [[ ! -z "$CONFIGURATION" ]]; then
           export AUTOBUILD_CONFIGURATION="$CONFIGURATION"
+        fi
+
+        if [[ ! -z "$PLATFORM" ]]; then
+          export AUTOBUILD_PLATFORM="$PLATFORM"
         fi
 
         autobuild install
