@@ -101,8 +101,8 @@ runs:
       env:
         SHA: ${{ github.event.pull_request.head.sha || github.sha }}
       run: |
-        echo "::set-output name=long::$SHA"
-        echo "::set-output name=short::${SHA:0:7}"
+        echo "long=$SHA" >> $GITHUB_OUTPUT
+        echo "short=${SHA:0:7}" >> $GITHUB_OUTPUT
 
     - name: Checkout build variables
       uses: actions/checkout@v3
@@ -138,9 +138,9 @@ runs:
         WINDOWS: ${{ runner.os == 'Windows' }}
       run: |
         if [[ $WINDOWS == 'true' ]]; then
-          echo "::set-output name=shell::C:\cygwin64\bin\bash.exe --login --norc -eo pipefail -o igncr '{0}'"
+          echo "shell=C:\cygwin64\bin\bash.exe --login --norc -eo pipefail -o igncr '{0}'" >> $GITHUB_OUTPUT
         else
-          echo '::set-output name=shell::bash'
+          echo "shell=bash" >> $GITHUB_OUTPUT
         fi
 
     - name: Cache installables
@@ -215,15 +215,15 @@ runs:
         package_basename="${package_basename##*\\}"
         package_basename_no_ext="$(basename $package_basename .tar.zst)"
 
-        echo "::set-output name=package_basename::$package_basename"
-        echo "::set-output name=package_basename_no_ext::$package_basename_no_ext"
-        echo "::set-output name=package_filename::$package_filename"
-        echo "::set-output name=package_md5::$package_md5"
-        echo "::set-output name=package_sha1::$package_sha1"
-        echo "::set-output name=package_sha256::$package_sha256"
-        echo "::set-output name=package_blake2b::$package_blake2b"
-        echo "::set-output name=package_name::$package_name"
-        echo "::set-output name=package_platform=$package_platform"
+        echo "package_basename=$package_basename" >> $GITHUB_OUTPUT
+        echo "package_basename_no_ext=$package_basename_no_ext" >> $GITHUB_OUTPUT
+        echo "package_filename=$package_filename" >> $GITHUB_OUTPUT
+        echo "package_md5=$package_md5" >> $GITHUB_OUTPUT
+        echo "package_sha1=$package_sha1" >> $GITHUB_OUTPUT
+        echo "package_sha256=$package_sha256" >> $GITHUB_OUTPUT
+        echo "package_blake2b=$package_blake2b" >> $GITHUB_OUTPUT
+        echo "package_name=$package_name" >> $GITHUB_OUTPUT
+        echo "package_platform=$package_platform" >> $GITHUB_OUTPUT
 
     - uses: actions/upload-artifact@v3
       with:
