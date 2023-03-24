@@ -28,6 +28,9 @@ inputs:
     type: string
     description: AUTOBUILD_ADDRSIZE
     default: "64"
+  token:
+    type: string
+    description: AUTOBUILD_GITHUB_TOKEN
   build-variables-ref:
     type: string
     description: build-variables repository ref
@@ -162,6 +165,7 @@ runs:
         AUTOBUILD: autobuild # Expected by some 3p build scripts
         AUTOBUILD_ADDRSIZE: ${{ inputs.addrsize }}
         AUTOBUILD_CONFIG_FILE: ${{ inputs.file }}
+        AUTOBUILD_GITHUB_TOKEN: ${{ inputs.token }}
         AUTOBUILD_INSTALLABLE_CACHE: ${{ github.workspace }}/.autobuild-installables
         AUTOBUILD_VARIABLES_FILE: ${{ github.workspace }}/.build-variables/variables
         AUTOBUILD_VCS_INFO: "true"
