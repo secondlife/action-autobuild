@@ -123,7 +123,12 @@ runs:
       env:
         VERSION: ${{ inputs.autobuild-version }}
       if: inputs.setup-autobuild
-      run: pip install autobuild==$VERSION
+      run: |
+        if [[ $VERSION = *.*.* ]]; then
+          pip install autobuild==$VERSION
+        else
+          pip install "autobuild @ git+https://github.com/secondlife/autobuild@$VERSION" 
+        fi
 
     - name: Setup cygwin
       if: ${{ runner.os == 'Windows' }}

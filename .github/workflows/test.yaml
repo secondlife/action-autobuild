@@ -38,3 +38,9 @@ jobs:
         with:
           checkout: false
           file: autobuild-scm.xml
+
+      # Test git-based autobuild install
+      - uses: ./
+        with:
+          version: main
+          checkout: false

@@ -19,7 +19,9 @@ jobs:
         os: [windows-2019, macos-11, ubuntu-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: secondlife/autobuild@v1
+      - uses: secondlife/action-autobuild@v3
+        with:
+          autobuild-version: 3.9.0 # PyPI version or git ref
 ```
 
 For a full list of available action inputs see [action.yaml](action.yaml).
