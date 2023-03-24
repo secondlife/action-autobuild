@@ -42,5 +42,5 @@ jobs:
       # Test git-based autobuild install
       - uses: ./
         with:
-          version: main
+          autobuild-version: main
           checkout: false
