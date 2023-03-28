@@ -32,7 +32,7 @@ jobs:
           checkout: false
 
       - shell: bash
-        run : rm -rf stage
+        run: rm -rf stage
 
       - uses: ./
         with:
@@ -44,3 +44,16 @@ jobs:
         with:
           autobuild-version: main
           checkout: false
+      
+      # Test custom python version
+      - uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+      - uses: ./
+        with:
+          setup-python: false
+      - name: Check python version
+        shell: bash
+        run: |
+          ver="$(python --version)"
+          [[ "$ver" == "Python 3.10."* ]] || exit "Expected python 3.10, got $ver" 
