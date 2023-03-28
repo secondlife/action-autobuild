@@ -109,7 +109,7 @@ runs:
 
     - name: Checkout build variables
       uses: actions/checkout@v3
-      if: inputs.checkout-build-variables
+      if: ${{ fromJSON(inputs.checkout-build-variables) }}
       with:
         repository: secondlife/build-variables
         ref: ${{ inputs.build-variables-ref }}
@@ -117,7 +117,7 @@ runs:
 
     - name: Setup python
       uses: actions/setup-python@v4
-      if: inputs.setup-python
+      if: ${{ fromJSON(inputs.setup-python) }}
       with:
         python-version: 3.x
 
@@ -125,7 +125,7 @@ runs:
       shell: bash
       env:
         VERSION: ${{ inputs.autobuild-version }}
-      if: inputs.setup-autobuild
+      if: ${{ fromJSON(inputs.setup-autobuild) }}
       run: |
         if [[ $VERSION = *.*.* ]]; then
           pip install autobuild==$VERSION
