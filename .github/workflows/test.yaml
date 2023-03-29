@@ -45,6 +45,15 @@ jobs:
           autobuild-version: main
           checkout: false
       
+      # Test alternative compression-format
+      - uses: ./
+        with:
+          archive-format: tbz2
+          checkout: false
+      - name: Check bz2 package
+        shell: bash
+        run: ls *.tar.bz2 >/dev/null || exit "Expected .tar.bz2 package"
+
       # Test custom python version
       - uses: actions/setup-python@v4
         with:
