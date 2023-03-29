@@ -2,6 +2,10 @@ name: Autobuild
 description: Build and package an autobuild project
 
 inputs:
+  archive-format:
+    type: string
+    description: Autobuild package compression format (tbz2, tzst, etc.)
+    default: tzst
   checkout:
     type: boolean
     description: Perform git checkout
@@ -204,7 +208,7 @@ runs:
         autobuild install
         autobuild configure ${{ inputs.configure-args }}
         autobuild build --no-configure ${{ inputs.build-args }}
-        autobuild package --results-file autobuild-results.json --archive-format tzst
+        autobuild package --results-file autobuild-results.json --archive-format ${{ inputs.archive-format }}
         autobuild graph --type mermaid > autobuild-graph.mermaid
 
     - name: Read results
