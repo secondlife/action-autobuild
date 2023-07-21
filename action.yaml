@@ -50,7 +50,7 @@ inputs:
   autobuild-version:
     type: string
     description: Version of autobuild to install
-    default: v3.7.0
+    default: 3.*
   cygwin-packages:
     type: string
     description: Additional cygwin packages to install
@@ -131,8 +131,8 @@ runs:
         VERSION: ${{ inputs.autobuild-version }}
       if: ${{ fromJSON(inputs.setup-autobuild) }}
       run: |
-        if [[ $VERSION = *.*.* ]]; then
-          pip install autobuild==$VERSION
+        if [[ $VERSION =~ ^[0-9] ]]; then
+          pip install "autobuild==$VERSION"
         else
           pip install "autobuild @ git+https://github.com/secondlife/autobuild@$VERSION" 
         fi
