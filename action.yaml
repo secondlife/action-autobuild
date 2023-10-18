@@ -134,8 +134,12 @@ runs:
       env:
         WINDOWS: ${{ runner.os == 'Windows' }}
       run: |
-        if [[ -n '${{ inputs.shell }}' ]]; then
+        if [[ '${{ inputs.shell }}' =~ '{0}' ]]; then
+          # caller provided shell override with required {0}, use as is
           echo 'shell=${{ inputs.shell }}' >> "$GITHUB_OUTPUT"
+        elif [[ -n '${{ inputs.shell }}' ]]; then
+          # caller provided shell override without {0}, append it
+          echo 'shell=${{ inputs.shell }} {0}' >> "$GITHUB_OUTPUT"
         elif [[ $WINDOWS == 'true' ]]; then
           echo "shell=C:\cygwin64\bin\bash.exe --login --norc -eo pipefail -o igncr '{0}'" >> $GITHUB_OUTPUT
         else
