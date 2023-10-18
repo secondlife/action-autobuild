@@ -60,6 +60,9 @@ inputs:
   configuration:
     type: string
     description: Autobuild configuration
+  shell:
+    description: Override bash shell for autobuild
+    required: false
 
 outputs:
   package-name:
@@ -125,8 +128,22 @@ runs:
       with:
         python-version: 3.x
 
-    - name: Setup autobuild
+    - name: Determine shell
+      id: shell
       shell: bash
+      env:
+        WINDOWS: ${{ runner.os == 'Windows' }}
+      run: |
+        if [[ -n '${{ inputs.shell }} ]]; then
+          echo 'shell=${{ inputs.shell }}' >> "$GITHUB_OUTPUT"
+        elif [[ $WINDOWS == 'true' ]]; then
+          echo "shell=C:\cygwin64\bin\bash.exe --login --norc -eo pipefail -o igncr '{0}'" >> $GITHUB_OUTPUT
+        else
+          echo "shell=bash" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Setup autobuild
+      shell: ${{ steps.shell.outputs.shell }}
       env:
         VERSION: ${{ inputs.autobuild-version }}
       if: ${{ fromJSON(inputs.setup-autobuild) }}
@@ -142,18 +159,6 @@ runs:
       uses: secondlife/setup-cygwin@v2
       with:
         packages: ${{ inputs.cygwin-packages }}
-
-    - name: Determine shell
-      id: shell
-      shell: bash
-      env:
-        WINDOWS: ${{ runner.os == 'Windows' }}
-      run: |
-        if [[ $WINDOWS == 'true' ]]; then
-          echo "shell=C:\cygwin64\bin\bash.exe --login --norc -eo pipefail -o igncr '{0}'" >> $GITHUB_OUTPUT
-        else
-          echo "shell=bash" >> $GITHUB_OUTPUT
-        fi
 
     - name: Cache installables
       uses: actions/cache@v3
