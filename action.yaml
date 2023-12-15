@@ -164,6 +164,7 @@ runs:
 
     - name: Determine branch
       id: which-branch
+      if: inputs.token
       uses: secondlife/viewer-build-util/which-branch@which-branch
       with:
         token: ${{ inputs.token }}
@@ -178,7 +179,7 @@ runs:
         AUTOBUILD_GITHUB_TOKEN: ${{ inputs.token }}
         AUTOBUILD_INSTALLABLE_CACHE: ${{ github.workspace }}/.autobuild-installables
         AUTOBUILD_VARIABLES_FILE: ${{ github.workspace }}/.build-variables/variables
-        AUTOBUILD_VCS_BRANCH: ${{ steps.which-branch.outputs.branch }}
+        AUTOBUILD_VCS_BRANCH: ${{ steps.which-branch.outputs.branch || github.ref_name }}
         AUTOBUILD_VCS_INFO: "true"
         BUILD_ID: ${{ inputs.build-id }}
         CONFIGURATION: ${{ inputs.configuration }}
