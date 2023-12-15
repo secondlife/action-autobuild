@@ -164,10 +164,10 @@ runs:
 
     - name: Determine branch
       id: which-branch
-      if: inputs.token
-      uses: secondlife/viewer-build-util/which-branch@which-branch
-      with:
-        token: ${{ inputs.token }}
+      shell: bash
+      run: |
+        branch="$(git branch -r --contains ${{ steps.sha.outputs.long }})"
+        echo "branch=${branch#*/}" >> "$GITHUB_OUTPUT"
 
     - name: Run autobuild
       shell: ${{ steps.shell.outputs.shell }}
