@@ -162,6 +162,15 @@ runs:
         path: ${{ github.workspace }}/.autobuild-installables
         key: ${{ runner.os }}-${{ runner.arch }}-${{ inputs.configuration }}-${{ hashFiles('autobuild.xml') }}
 
+    - name: Determine branch
+      id: which-branch
+      shell: bash
+      run: |
+        # in real use, 'git branch -r --contains' should produce a single line,
+        # but our self-tests can emit more than one
+        branch="$(git branch -r --contains ${{ steps.sha.outputs.long }} | head -n 1)"
+        echo "branch=${branch#*/}" >> $GITHUB_OUTPUT
+
     - name: Run autobuild
       shell: ${{ steps.shell.outputs.shell }}
       id: autobuild
@@ -172,6 +181,7 @@ runs:
         AUTOBUILD_GITHUB_TOKEN: ${{ inputs.token }}
         AUTOBUILD_INSTALLABLE_CACHE: ${{ github.workspace }}/.autobuild-installables
         AUTOBUILD_VARIABLES_FILE: ${{ github.workspace }}/.build-variables/variables
+        AUTOBUILD_VCS_BRANCH: ${{ steps.which-branch.outputs.branch || github.ref_name }}
         AUTOBUILD_VCS_INFO: "true"
         BUILD_ID: ${{ inputs.build-id }}
         CONFIGURATION: ${{ inputs.configuration }}
