@@ -166,7 +166,9 @@ runs:
       id: which-branch
       shell: bash
       run: |
-        branch="$(git branch -r --contains ${{ steps.sha.outputs.long }})"
+        # in real use, 'git branch -r --contains' should produce a single line,
+        # but our self-tests can emit more than one
+        branch="$(git branch -r --contains ${{ steps.sha.outputs.long }} | head -n 1)"
         echo "branch=${branch#*/}" >> $GITHUB_OUTPUT
 
     - name: Run autobuild
