@@ -177,6 +177,7 @@ runs:
       env:
         AUTOBUILD: autobuild # Expected by some 3p build scripts
         AUTOBUILD_ADDRSIZE: ${{ inputs.addrsize }}
+        AUTOBUILD_BUILD_ID: ${{ github.run_id }}
         AUTOBUILD_CONFIG_FILE: ${{ inputs.file }}
         AUTOBUILD_GITHUB_TOKEN: ${{ inputs.token }}
         AUTOBUILD_INSTALLABLE_CACHE: ${{ github.workspace }}/.autobuild-installables
@@ -195,17 +196,6 @@ runs:
 
         use_scm_version="$(autobuild print --json | jq -j .package_description.use_scm_version)"
         use_scm_version="$(echo $use_scm_version | tr '[:upper:]' '[:lower:]')"
-
-        # Set AUTOBUILD_BUILD_ID
-        if [[ "$BUILD_ID" == "SHA" ]]; then
-          # Only default build ID to SHA if SCM version is disabled
-          if [[ "$use_scm_version" != "true" ]]; then
-            export AUTOBUILD_BUILD_ID="$SHORT_SHA"
-          fi
-        elif [[ ! -z "$BUILD_ID" ]]; then
-          # Allow an explicitly set build ID to be used
-          export AUTOBUILD_BUILD_ID="$BUILD_ID"
-        fi
 
         if [[ ! -z "$CONFIGURATION" ]]; then
           export AUTOBUILD_CONFIGURATION="$CONFIGURATION"
