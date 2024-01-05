@@ -60,6 +60,9 @@ inputs:
   configuration:
     type: string
     description: Autobuild configuration
+  artifact-name:
+    type: string
+    description: Name of artifact to upload, defaults to the autobuild package name
 
 outputs:
   package-name:
@@ -238,9 +241,9 @@ runs:
         echo "package_name=$package_name" >> $GITHUB_OUTPUT
         echo "package_platform=$package_platform" >> $GITHUB_OUTPUT
 
-    - uses: actions/upload-artifact@v3
+    - uses: actions/upload-artifact@v4
       with:
-        name: ${{ steps.results.outputs.package_basename_no_ext }}
+        name: ${{ inputs.artifact-name || steps.results.outputs.package_basename_no_ext }}
         path: |
           ${{ steps.results.outputs.package_filename }}
           autobuild-results.json
