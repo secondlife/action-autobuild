@@ -180,6 +180,7 @@ runs:
         AUTOBUILD_VCS_BRANCH: ${{ steps.which-branch.outputs.branch || github.ref_name }}
         AUTOBUILD_VCS_INFO: "true"
         AUTOBUILD_VCS_REVISION: ${{ steps.sha.outputs.long }}
+        AUTOBUILD_VCS_URL: ${{ github.repositoryUrl }}
         BUILD_ID: ${{ inputs.build-id }}
         CONFIGURATION: ${{ inputs.configuration }}
         PLATFORM: ${{ inputs.platform }}
