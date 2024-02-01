@@ -98,10 +98,6 @@ runs:
       uses: actions/checkout@v4
       if: inputs.checkout
       with:
-        # Work around the fact that in the context of a pull request github.sha
-        # references a dynamic merge commit rather than the branch head
-        # https://frontside.com/blog/2020-05-26-github-actions-pull_request/#how-does-pull_request-affect-actionscheckout
-        ref: ${{ github.event.pull_request.head.sha || github.sha }}
         fetch-depth: 0 # Fetch all history for SCM version
         submodules: recursive
 
@@ -168,11 +164,7 @@ runs:
     - name: Determine branch
       id: which-branch
       shell: bash
-      run: |
-        # in real use, 'git branch -r --contains' should produce a single line,
-        # but our self-tests can emit more than one
-        branch="$(git branch -r --contains ${{ steps.sha.outputs.long }} | head -n 1)"
-        echo "branch=${branch#*/}" >> $GITHUB_OUTPUT
+      run: echo "branch=${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}" >> $GITHUB_OUTPUT
 
     - name: Run autobuild
       shell: ${{ steps.shell.outputs.shell }}
@@ -187,6 +179,7 @@ runs:
         AUTOBUILD_VARIABLES_FILE: ${{ github.workspace }}/.build-variables/variables
         AUTOBUILD_VCS_BRANCH: ${{ steps.which-branch.outputs.branch || github.ref_name }}
         AUTOBUILD_VCS_INFO: "true"
+        AUTOBUILD_VCS_REVISION: ${{ steps.sha.outputs.long }}
         BUILD_ID: ${{ inputs.build-id }}
         CONFIGURATION: ${{ inputs.configuration }}
         PLATFORM: ${{ inputs.platform }}
