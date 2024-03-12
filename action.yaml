@@ -159,7 +159,7 @@ runs:
         fi
 
     - name: Cache installables
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       id: cache-installables
       with:
         path: ${{ github.workspace }}/.autobuild-installables
