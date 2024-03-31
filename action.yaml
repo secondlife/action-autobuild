@@ -63,6 +63,10 @@ inputs:
   artifact-name:
     type: string
     description: Name of artifact to upload, defaults to the autobuild package name
+  shallow:
+    type: boolean
+    description: Use shallow clone
+    default: false
 
 outputs:
   package-name:
@@ -87,12 +91,8 @@ runs:
   steps:
     - name: Disable autocrlf
       shell: bash
-      env:
-        WINDOWS: ${{ runner.os == 'Windows' }}
-      run: |
-        if [[ $WINDOWS == 'true' ]]; then
-          git config --global core.autocrlf input
-        fi
+      if: runner.os == 'Windows'
+      run: git config --global core.autocrlf input
 
     - name: Checkout
       uses: actions/checkout@v4
@@ -102,7 +102,7 @@ runs:
         # references a dynamic merge commit rather than the branch head
         # https://frontside.com/blog/2020-05-26-github-actions-pull_request/#how-does-pull_request-affect-actionscheckout
         ref: ${{ github.event.pull_request.head.sha || github.sha }}
-        fetch-depth: 0 # Fetch all history for SCM version
+        fetch-depth: ${{ fromJSON(inputs.shallow) && 1 || 0 }} # Fetch all history for SCM version
         submodules: recursive
 
     - name: Create short SHA
