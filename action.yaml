@@ -51,9 +51,9 @@ inputs:
     type: string
     description: Version of autobuild to install
     default: 3.*
-  cygwin-packages:
+  mysys2-packages:
     type: string
-    description: Additional cygwin packages to install
+    description: Additional mysys2 packages to install
   platform:
     type: string
     description: Autobuild platform
@@ -137,26 +137,13 @@ runs:
         if [[ $VERSION =~ ^[0-9] ]]; then
           pip install "autobuild==$VERSION"
         else
-          pip install "autobuild @ git+https://github.com/secondlife/autobuild@$VERSION" 
+          pip install "autobuild @ git+https://github.com/secondlife/autobuild@$VERSION"
         fi
 
-    - name: Setup cygwin
-      if: ${{ runner.os == 'Windows' }}
-      uses: secondlife/setup-cygwin@v3
-      with:
-        packages: ${{ inputs.cygwin-packages }}
-
-    - name: Determine shell
-      id: shell
+    - name: Setup mysys2
+      if: ${{ runner.os == 'Windows' && inputs.mysys2-packages }}
       shell: bash
-      env:
-        WINDOWS: ${{ runner.os == 'Windows' }}
-      run: |
-        if [[ $WINDOWS == 'true' ]]; then
-          echo "shell=C:\cygwin64\bin\bash.exe --login --norc -eo pipefail -o igncr '{0}'" >> $GITHUB_OUTPUT
-        else
-          echo "shell=bash" >> $GITHUB_OUTPUT
-        fi
+      run: pacman -Sy --noconfirm ${{ inputs.mysys2-packages }}
 
     - name: Cache installables
       uses: actions/cache@v4
@@ -171,7 +158,7 @@ runs:
       run: echo "branch=${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}" >> $GITHUB_OUTPUT
 
     - name: Run autobuild
-      shell: ${{ steps.shell.outputs.shell }}
+      shell: bash
       id: autobuild
       env:
         AUTOBUILD: autobuild # Expected by some 3p build scripts
@@ -187,14 +174,12 @@ runs:
         AUTOBUILD_VCS_URL: ${{ github.repositoryUrl }}
         BUILD_ID: ${{ inputs.build-id }}
         CONFIGURATION: ${{ inputs.configuration }}
+        MSYS2_ARG_CONV_EXCL: "*" # Disable MSYS2 path conversion
         PLATFORM: ${{ inputs.platform }}
         SHORT_SHA: ${{ steps.sha.outputs.short }}
         WINDOWS: ${{ runner.os == 'Windows' }}
         WORKSPACE: ${{ github.workspace }}
       run: |
-        # Change into github.workspace, as cygwin shell places us in $HOME
-        cd "$WORKSPACE"
-
         use_scm_version="$(autobuild print --json | jq -j .package_description.use_scm_version)"
         use_scm_version="$(echo $use_scm_version | tr '[:upper:]' '[:lower:]')"
 
