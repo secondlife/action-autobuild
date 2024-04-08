@@ -47,7 +47,7 @@ jobs:
           artifact-name: autobuild-git-${{ matrix.os }}
           autobuild-version: main
           checkout: false
-      
+
       # Test alternative compression-format
       - uses: ./
         with:
@@ -71,4 +71,4 @@ jobs:
         shell: bash
         run: |
           ver="$(python --version)"
-          [[ "$ver" == "Python 3.10."* ]] || exit "Expected python 3.10, got $ver" 
+          [[ "$ver" == "Python 3.10."* ]] || exit "Expected python 3.10, got $ver"
