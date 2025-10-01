@@ -38,7 +38,7 @@ inputs:
   build-variables-ref:
     type: string
     description: build-variables repository ref
-    default: universal
+    default: master
   build-id:
     type: string
     description: "Built id (default: commit sha)"
