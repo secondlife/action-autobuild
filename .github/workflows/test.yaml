@@ -27,6 +27,9 @@ jobs:
 
       - uses: actions/checkout@v4
 
+      - name: Fetch all tags
+        run: git fetch --tags --force
+
       - uses: ./
         with:
           artifact-name: autobuild-${{ matrix.os }}
