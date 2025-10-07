@@ -51,9 +51,9 @@ inputs:
     type: string
     description: Version of autobuild to install
     default: 3.*
-  mysys2-packages:
+  msys2-packages:
     type: string
-    description: Additional mysys2 packages to install
+    description: Additional msys2 packages to install
   platform:
     type: string
     description: Autobuild platform
@@ -140,10 +140,12 @@ runs:
           pip install "autobuild @ git+https://github.com/secondlife/autobuild@$VERSION"
         fi
 
-    - name: Setup mysys2
-      if: ${{ runner.os == 'Windows' && inputs.mysys2-packages }}
+    - name: Setup msys2
+      if: ${{ runner.os == 'Windows' && inputs.msys2-packages }}
       shell: bash
-      run: pacman -Sy --noconfirm ${{ inputs.mysys2-packages }}
+      env:
+        MSYS2_PACKAGES: ${{ inputs.msys2-packages }}
+      run: pacman -Sy --noconfirm "$MSYS2_PACKAGES"
 
     - name: Cache installables
       uses: actions/cache@v4
