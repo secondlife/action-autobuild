@@ -143,7 +143,9 @@ runs:
     - name: Setup msys2
       if: ${{ runner.os == 'Windows' && inputs.msys2-packages }}
       shell: bash
-      run: pacman -Sy --noconfirm ${{ inputs.msys2-packages }}
+      env:
+        MSYS2_PACKAGES: ${{ inputs.msys2-packages }}
+      run: pacman -Sy --noconfirm "$MSYS2_PACKAGES"
 
     - name: Cache installables
       uses: actions/cache@v4
