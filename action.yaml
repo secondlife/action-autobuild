@@ -148,7 +148,7 @@ runs:
       run: pacman -Sy --noconfirm "$MSYS2_PACKAGES"
 
     - name: Cache installables
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       id: cache-installables
       with:
         path: ${{ github.workspace }}/.autobuild-installables
